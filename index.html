@@ -1,0 +1,649 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SIR Epidemic Model Simulation</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        
+        h2 {
+            color: #333;
+            text-align: center;
+            font-size: 1.3em;
+            margin-top: 20px;
+            margin-bottom: 10px;
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+        }
+        .simulation-container {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-between;
+            margin-top: 20px;
+        }
+        .canvas-container {
+            flex: 2;
+            margin-right: 20px;
+        }
+        .controls-container {
+            flex: 1;
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        canvas {
+            background-color: black;
+            display: block;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        .chart-container {
+            width: 100%;
+            margin-top: 20px;
+            background-color: #fff;
+            padding: 10px;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        .control-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        input[type="range"] {
+            width: 100%;
+        }
+        .value-display {
+            display: inline-block;
+            width: 50px;
+            text-align: right;
+        }
+        button {
+            background-color: #4CAF50;
+            border: none;
+            color: white;
+            padding: 10px 15px;
+            text-align: center;
+            text-decoration: none;
+            display: inline-block;
+            font-size: 16px;
+            margin: 4px 2px;
+            cursor: pointer;
+            border-radius: 4px;
+            transition: background-color 0.3s;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        button:disabled {
+            background-color: #cccccc;
+            cursor: not-allowed;
+        }
+        .status {
+            margin-top: 10px;
+            font-weight: bold;
+        }
+        .legend {
+            display: flex;
+            margin-top: 10px;
+            justify-content: space-around;
+        }
+        .legend-item {
+            display: flex;
+            align-items: center;
+            margin-right: 10px;
+        }
+        .legend-color {
+            width: 15px;
+            height: 15px;
+            margin-right: 5px;
+            border-radius: 50%;
+        }
+        .susceptible { background-color: #FFD700; }
+        .infected { background-color: red; }
+        .recovered { background-color: green; }
+        .section-title {
+            margin-top: 15px;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 5px;
+            font-size: 1.1em;
+        }
+    </style>
+</head>
+<body>
+    <h1>SIR Epidemic Model Simulation</h1>
+    
+    <div class="equations-container" style="background-color: white; padding: 15px; border-radius: 8px; margin-bottom: 20px; box-shadow: 0 2px 5px rgba(0,0,0,0.1);">
+        <h3>Kermack–McKendrick SIR Model Equations:</h3>
+        <div style="display: flex; justify-content: space-around; flex-wrap: wrap; font-size: 1.2em;">
+            <div style="margin: 10px;">
+                <div style="font-family: 'Times New Roman', Times, serif;">
+                    dS/dt = -β × S × I
+                </div>
+                <div style="font-size: 0.8em; color: #666; margin-top: 5px;">
+                    Rate of change of susceptible population
+                </div>
+            </div>
+            <div style="margin: 10px;">
+                <div style="font-family: 'Times New Roman', Times, serif;">
+                    dI/dt = β × S × I - γ × I
+                </div>
+                <div style="font-size: 0.8em; color: #666; margin-top: 5px;">
+                    Rate of change of infected population
+                </div>
+            </div>
+            <div style="margin: 10px;">
+                <div style="font-family: 'Times New Roman', Times, serif;">
+                    dR/dt = γ × I
+                </div>
+                <div style="font-size: 0.8em; color: #666; margin-top: 5px;">
+                    Rate of change of recovered population
+                </div>
+            </div>
+        </div>
+        <div style="margin-top: 15px; font-size: 0.9em;">
+            Where: <strong>S</strong> = Susceptible, <strong>I</strong> = Infected, <strong>R</strong> = Recovered<br>
+            <strong>β</strong> (beta) = Transmission rate, <strong>γ</strong> (gamma) = Recovery rate<br>
+            <strong>R₀</strong> (Basic Reproduction Number) = β/γ
+        </div>
+    </div>
+    
+    <div class="simulation-container">
+        <div class="canvas-container">
+            <canvas id="simulationCanvas" width="600" height="400"></canvas>
+            <div class="legend">
+                <div class="legend-item">
+                    <div class="legend-color susceptible"></div>
+                    <span>Susceptible</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color infected"></div>
+                    <span>Infected</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color recovered"></div>
+                    <span>Recovered</span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="controls-container">
+            <div class="section-title">Population Parameters</div>
+            <div class="control-group">
+                <label for="populationSize">Population Size: <span id="populationSizeValue" class="value-display">200</span></label>
+                <input type="range" id="populationSize" min="50" max="500" value="200" step="10">
+            </div>
+            
+            <div class="control-group">
+                <label for="initialInfected">Initial Infected: <span id="initialInfectedValue" class="value-display">5</span></label>
+                <input type="range" id="initialInfected" min="1" max="50" value="5" step="1">
+            </div>
+            
+            <div class="section-title">Epidemic Parameters</div>
+            <div class="control-group">
+                <label for="transmissionRate">Transmission Rate (β): <span id="transmissionRateValue" class="value-display">0.5</span></label>
+                <input type="range" id="transmissionRate" min="0.1" max="1.0" value="0.5" step="0.05">
+            </div>
+            
+            <div class="control-group">
+                <label for="recoveryRate">Recovery Rate (γ): <span id="recoveryRateValue" class="value-display">0.1</span></label>
+                <input type="range" id="recoveryRate" min="0.01" max="0.2" value="0.1" step="0.01">
+            </div>
+            
+            <div class="control-group">
+                <label for="r0">Basic Reproduction Number (R₀): <span id="r0Value" class="value-display">5.0</span></label>
+                <input type="range" id="r0" min="1" max="10" value="5.0" step="0.1">
+            </div>
+            
+            <div class="section-title">Simulation Parameters</div>
+            <div class="control-group">
+                <label for="movementSpeed">Movement Speed: <span id="movementSpeedValue" class="value-display">1.0</span></label>
+                <input type="range" id="movementSpeed" min="0" max="2" value="1.0" step="0.1">
+            </div>
+            
+            <div class="control-group">
+                <label for="infectionRadius">Infection Radius: <span id="infectionRadiusValue" class="value-display">10</span></label>
+                <input type="range" id="infectionRadius" min="5" max="30" value="10" step="1">
+            </div>
+            
+            <button id="startButton">Start Simulation</button>
+            <button id="resetButton">Reset</button>
+            
+            <div class="status">
+                <div>Susceptible: <span id="susceptibleCount">0</span></div>
+                <div>Infected: <span id="infectedCount">0</span></div>
+                <div>Recovered: <span id="recoveredCount">0</span></div>
+                <div>Time: <span id="timeElapsed">0</span> days</div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="chart-container">
+        <canvas id="sirBarChart" width="900" height="200"></canvas>
+    </div>
+    
+    <div class="chart-container">
+        <canvas id="sirChart" width="900" height="200"></canvas>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.7.1/chart.min.js"></script>
+    <script>
+        // Constants and variables
+        const canvas = document.getElementById('simulationCanvas');
+        const ctx = canvas.getContext('2d');
+        const width = canvas.width;
+        const height = canvas.height;
+        
+        let population = [];
+        let isRunning = false;
+        let animationId = null;
+        let dayCounter = 0;
+        let dataPoints = { susceptible: [], infected: [], recovered: [], days: [] };
+        
+        // Status counts
+        let counts = { susceptible: 0, infected: 0, recovered: 0 };
+        
+        // Parameters (will be set from UI)
+        let params = {
+            populationSize: 200,
+            initialInfected: 5,
+            transmissionRate: 0.5,  // Beta
+            recoveryRate: 0.1,      // Gamma
+            movementSpeed: 1.0,
+            infectionRadius: 10     // Distance for potential infection
+        };
+        
+        // Calculate and update R0
+        function calculateR0() {
+            return params.transmissionRate / params.recoveryRate;
+        }
+        
+        // Person class
+        class Person {
+            constructor(x, y, status) {
+                this.x = x;
+                this.y = y;
+                this.status = status; // 'S', 'I', or 'R'
+                this.daysInfected = 0;
+                this.direction = Math.random() * Math.PI * 2;
+                this.speed = params.movementSpeed * (0.5 + Math.random());
+            }
+            
+            move() {
+                if (params.movementSpeed > 0) {
+                    // Occasionally change direction
+                    if (Math.random() < 0.05) {
+                        this.direction = Math.random() * Math.PI * 2;
+                    }
+                    
+                    this.x += Math.cos(this.direction) * this.speed;
+                    this.y += Math.sin(this.direction) * this.speed;
+                    
+                    // Bounce off walls
+                    if (this.x < 0 || this.x > width) {
+                        this.direction = Math.PI - this.direction;
+                        this.x = Math.max(0, Math.min(width, this.x));
+                    }
+                    if (this.y < 0 || this.y > height) {
+                        this.direction = -this.direction;
+                        this.y = Math.max(0, Math.min(height, this.y));
+                    }
+                }
+            }
+            
+            update() {
+                if (this.status === 'I') {
+                    this.daysInfected++;
+                    
+                    // Check for recovery
+                    if (Math.random() < params.recoveryRate / 60) {
+                        this.status = 'R';
+                        counts.infected--;
+                        counts.recovered++;
+                    }
+                }
+            }
+            
+            draw() {
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, 5, 0, Math.PI * 2);
+                
+                switch(this.status) {
+                    case 'S':
+                        ctx.fillStyle = '#FFD700'; // Yellow for susceptible
+                        break;
+                    case 'I':
+                        ctx.fillStyle = 'red';
+                        break;
+                    case 'R':
+                        ctx.fillStyle = 'green';
+                        break;
+                }
+                
+                ctx.fill();
+            }
+        }
+        
+        // Initialize the simulation
+        function initializeSimulation() {
+            population = [];
+            counts = { susceptible: params.populationSize - params.initialInfected, infected: params.initialInfected, recovered: 0 };
+            dayCounter = 0;
+            
+            // Reset chart data
+            dataPoints = { susceptible: [], infected: [], recovered: [], days: [] };
+            
+            // Create population
+            for (let i = 0; i < params.populationSize; i++) {
+                const x = Math.random() * width;
+                const y = Math.random() * height;
+                const status = i < params.initialInfected ? 'I' : 'S';
+                
+                population.push(new Person(x, y, status));
+            }
+            
+            // Update UI
+            updateCountDisplay();
+            
+            // Initialize chart data
+            updateChartData();
+            createOrUpdateChart();
+        }
+        
+        // Main simulation step
+        function simulationStep() {
+            // Clear canvas
+            ctx.clearRect(0, 0, width, height);
+            
+            // Move and draw people
+            for (let person of population) {
+                person.move();
+                person.draw();
+            }
+            
+            // Check for new infections
+            for (let i = 0; i < population.length; i++) {
+                if (population[i].status === 'I') {
+                    for (let j = 0; j < population.length; j++) {
+                        if (population[j].status === 'S') {
+                            const dx = population[i].x - population[j].x;
+                            const dy = population[i].y - population[j].y;
+                            const distance = Math.sqrt(dx * dx + dy * dy);
+                            
+                            if (distance < params.infectionRadius) {
+                                // Potential infection based on transmission rate
+                                if (Math.random() < params.transmissionRate / 60) {
+                                    population[j].status = 'I';
+                                    counts.susceptible--;
+                                    counts.infected++;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            
+            // Update each person (check for recovery)
+            for (let person of population) {
+                person.update();
+            }
+            
+            // Increment day counter every 60 frames (approximately)
+            if (frameCount % 60 === 0) {
+                dayCounter++;
+                document.getElementById('timeElapsed').textContent = dayCounter;
+                updateChartData();
+                createOrUpdateChart();
+            }
+            
+            updateCountDisplay();
+            
+            // Continue animation if still running
+            if (isRunning) {
+                animationId = requestAnimationFrame(simulationStep);
+            }
+            
+            // Auto-stop if no more infected
+            if (counts.infected === 0 && isRunning) {
+                stopSimulation();
+            }
+            
+            frameCount++;
+        }
+        
+        let frameCount = 0;
+        
+        // Update the count display in UI
+        function updateCountDisplay() {
+            document.getElementById('susceptibleCount').textContent = counts.susceptible;
+            document.getElementById('infectedCount').textContent = counts.infected;
+            document.getElementById('recoveredCount').textContent = counts.recovered;
+        }
+        
+        function startSimulation() {
+            if (!isRunning) {
+                isRunning = true;
+                document.getElementById('startButton').textContent = 'Pause';
+                // Start the animation loop
+                animationId = requestAnimationFrame(simulationStep);
+            } else {
+                stopSimulation();
+            }
+        }
+        
+        // Stop the simulation
+        function stopSimulation() {
+            isRunning = false;
+            document.getElementById('startButton').textContent = 'Start Simulation';
+            if (animationId) {
+                cancelAnimationFrame(animationId);
+                animationId = null;
+            }
+        }
+        
+        // Reset the simulation
+        function resetSimulation() {
+            stopSimulation();
+            initializeSimulation();
+        }
+        
+        // Chart functionality
+        let sirChart = null;
+        let sirBarChart = null;
+        
+        function updateChartData() {
+            dataPoints.days.push(dayCounter);
+            dataPoints.susceptible.push(counts.susceptible);
+            dataPoints.infected.push(counts.infected);
+            dataPoints.recovered.push(counts.recovered);
+        }
+        
+        function createOrUpdateChart() {
+            // Update line chart
+            const chartCanvas = document.getElementById('sirChart');
+            const chartCtx = chartCanvas.getContext('2d');
+            
+            if (sirChart) {
+                sirChart.data.labels = dataPoints.days;
+                sirChart.data.datasets[0].data = dataPoints.susceptible;
+                sirChart.data.datasets[1].data = dataPoints.infected;
+                sirChart.data.datasets[2].data = dataPoints.recovered;
+                sirChart.update();
+            } else {
+                sirChart = new Chart(chartCtx, {
+                    type: 'line',
+                    data: {
+                        labels: dataPoints.days,
+                        datasets: [
+                            {
+                                label: 'Susceptible',
+                                data: dataPoints.susceptible,
+                                borderColor: 'rgba(255, 215, 0, 0.8)',
+                                backgroundColor: 'rgba(255, 215, 0, 0.2)',
+                                tension: 0.2
+                            },
+                            {
+                                label: 'Infected',
+                                data: dataPoints.infected,
+                                borderColor: 'rgba(255, 0, 0, 0.8)',
+                                backgroundColor: 'rgba(255, 0, 0, 0.2)',
+                                tension: 0.2
+                            },
+                            {
+                                label: 'Recovered',
+                                data: dataPoints.recovered,
+                                borderColor: 'rgba(0, 255, 0, 0.8)',
+                                backgroundColor: 'rgba(0, 255, 0, 0.2)',
+                                tension: 0.2
+                            }
+                        ]
+                    },
+                    options: {
+                        animation: false,
+                        plugins: {
+                            title: {
+                                display: true,
+                                text: 'Population Over Time (Line Chart)'
+                            }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                max: params.populationSize
+                            }
+                        }
+                    }
+                });
+            }
+            
+            // Update bar chart
+            const barChartCanvas = document.getElementById('sirBarChart');
+            const barChartCtx = barChartCanvas.getContext('2d');
+            
+            // Get the current day's data or the last data point
+            const currentDay = dataPoints.days.length > 0 ? dataPoints.days[dataPoints.days.length - 1] : 0;
+            const currentSusceptible = dataPoints.susceptible.length > 0 ? dataPoints.susceptible[dataPoints.susceptible.length - 1] : 0;
+            const currentInfected = dataPoints.infected.length > 0 ? dataPoints.infected[dataPoints.infected.length - 1] : 0;
+            const currentRecovered = dataPoints.recovered.length > 0 ? dataPoints.recovered[dataPoints.recovered.length - 1] : 0;
+            
+            if (sirBarChart) {
+                sirBarChart.data.datasets[0].data = [currentSusceptible, currentInfected, currentRecovered];
+                sirBarChart.update();
+            } else {
+                sirBarChart = new Chart(barChartCtx, {
+                    type: 'bar',
+                    data: {
+                        labels: ['Susceptible', 'Infected', 'Recovered'],
+                        datasets: [{
+                            label: 'Current Population Status',
+                            data: [currentSusceptible, currentInfected, currentRecovered],
+                            backgroundColor: [
+                                'rgba(255, 215, 0, 0.8)',
+                                'rgba(255, 0, 0, 0.8)',
+                                'rgba(0, 255, 0, 0.8)'
+                            ],
+                            borderColor: [
+                                'rgba(255, 215, 0, 1)',
+                                'rgba(255, 0, 0, 1)',
+                                'rgba(0, 255, 0, 1)'
+                            ],
+                            borderWidth: 1
+                        }]
+                    },
+                    options: {
+                        animation: false,
+                        plugins: {
+                            title: {
+                                display: true,
+                                text: 'Current Population Distribution (Bar Chart)'
+                            }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                max: params.populationSize
+                            }
+                        }
+                    }
+                });
+            }
+        }
+        
+        // Synchronize R0 and related values
+        function syncR0FromRates() {
+            const r0 = calculateR0();
+            document.getElementById('r0Value').textContent = r0.toFixed(1);
+            document.getElementById('r0').value = r0;
+        }
+        
+        function syncRatesFromR0(r0) {
+            // Keep recovery rate the same, adjust transmission rate
+            params.transmissionRate = r0 * params.recoveryRate;
+            document.getElementById('transmissionRateValue').textContent = params.transmissionRate.toFixed(2);
+            document.getElementById('transmissionRate').value = params.transmissionRate;
+        }
+        
+        // Event listeners for UI controls
+        document.getElementById('populationSize').addEventListener('input', function(e) {
+            params.populationSize = parseInt(e.target.value);
+            document.getElementById('populationSizeValue').textContent = params.populationSize;
+        });
+        
+        document.getElementById('initialInfected').addEventListener('input', function(e) {
+            params.initialInfected = parseInt(e.target.value);
+            document.getElementById('initialInfectedValue').textContent = params.initialInfected;
+        });
+        
+        document.getElementById('transmissionRate').addEventListener('input', function(e) {
+            params.transmissionRate = parseFloat(e.target.value);
+            document.getElementById('transmissionRateValue').textContent = params.transmissionRate.toFixed(2);
+            syncR0FromRates();
+        });
+        
+        document.getElementById('recoveryRate').addEventListener('input', function(e) {
+            params.recoveryRate = parseFloat(e.target.value);
+            document.getElementById('recoveryRateValue').textContent = params.recoveryRate.toFixed(2);
+            syncR0FromRates();
+        });
+        
+        document.getElementById('r0').addEventListener('input', function(e) {
+            const r0 = parseFloat(e.target.value);
+            document.getElementById('r0Value').textContent = r0.toFixed(1);
+            syncRatesFromR0(r0);
+        });
+        
+        document.getElementById('movementSpeed').addEventListener('input', function(e) {
+            params.movementSpeed = parseFloat(e.target.value);
+            document.getElementById('movementSpeedValue').textContent = params.movementSpeed.toFixed(1);
+        });
+        
+        document.getElementById('infectionRadius').addEventListener('input', function(e) {
+            params.infectionRadius = parseInt(e.target.value);
+            document.getElementById('infectionRadiusValue').textContent = params.infectionRadius;
+        });
+        
+        document.getElementById('startButton').addEventListener('click', startSimulation);
+        document.getElementById('resetButton').addEventListener('click', resetSimulation);
+        
+        // Initialize on load
+        window.addEventListener('load', function() {
+            // Set initial R0 value
+            syncR0FromRates();
+            initializeSimulation();
+        });
+    </script>
+</body>
+</html>
